@@ -4,7 +4,7 @@
 
 const BEAT = 0.5;                  // 120 BPM
 const BADGER_BEATS = 24;           // a badger pops up on each beat, then
-const SNAKE_BEATS = 8;             // the snake rides through
+const SNAKE_BEATS = 16;            // the snake rides through, and back again
 const CYCLE = (BADGER_BEATS + SNAKE_BEATS) * BEAT;
 const MAX_BADGERS = 12;
 const COLOURS = ['#fdc549', '#e94076', '#009ecf', '#7ac29b', '#e7247f'];
@@ -80,6 +80,8 @@ function start() {
     ctx.translate(x + (Math.random() - 0.5) * shake, y + (Math.random() - 0.5) * shake);
     ctx.scale(punch, punch);
     ctx.font = `900 ${size}px Impact, 'Arial Black', sans-serif`;
+    const fit = Math.min(1, W * 0.8 / ctx.measureText(text).width);   // phones: shrink to fit
+    ctx.scale(fit, fit);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
@@ -137,26 +139,30 @@ function start() {
     if (!snaking) {
       word('BADGER', W / 2, H * 0.3, Math.min(W * 0.16, H * 0.16), COLOURS[beat % COLOURS.length], 1 + 0.25 * kick, 0);
     } else if (snake.complete && snake.naturalWidth) {
-      // The snake rides through from the right, nose first, hovering.
-      const u = snakeTime / (SNAKE_BEATS * BEAT);
+      // The snake rides through from the right, nose first, hovering; then turns and comes
+      // back the other way, a bit higher up.
+      const pass = snakeTime / (SNAKE_BEATS * BEAT / 2);
+      const back = pass >= 1;
+      const u = pass % 1;
       const sh = Math.min(H * 0.45, W * 0.5);
       const sw = sh * snake.width / snake.height;
-      const x = W + sw * 0.6 - u * (W + sw * 1.2);
-      const y = H * 0.62 + Math.sin(snakeTime * 7) * sh * 0.04;
+      const across = W + sw * 0.6 - u * (W + sw * 1.2);
+      const x = back ? W - across : across;
+      const y = H * (back ? 0.55 : 0.62) + Math.sin(snakeTime * 7) * sh * 0.04;
       ctx.save();
+      ctx.translate(x, y);
+      if (back) ctx.scale(-1, 1);
       // Speed lines behind the board.
+      ctx.globalAlpha = 0.6;
       for (let i = 0; i < 6; i += 1) {
         ctx.fillStyle = COLOURS[i % COLOURS.length];
-        ctx.globalAlpha = 0.6;
-        const ly = y + sh * (0.1 + i * 0.06);
-        ctx.fillRect(x + sw * 0.3, ly, W, sh * 0.02);
+        ctx.fillRect(sw * 0.3, sh * (0.1 + i * 0.06), W + sw, sh * 0.02);
       }
       ctx.globalAlpha = 1;
-      ctx.translate(x, y);
       ctx.rotate(Math.sin(snakeTime * 3.5) * 0.04);
       ctx.drawImage(snake, -sw / 2, -sh / 2, sw, sh);
       ctx.restore();
-      const text = beat < BADGER_BEATS + 4 ? 'SNAKE!' : "IT'S A SNAKE!";
+      const text = ['SNAKE!', 'A SNAKE!', 'SNAAAKE!', "OH, IT'S A SNAKE!"][Math.floor((beat - BADGER_BEATS) / 4)];
       word(text, W / 2, H * 0.3, Math.min(W * 0.13, H * 0.15), '#e94076', 1 + 0.15 * kick, Math.min(W, H) * 0.02);
     }
 
