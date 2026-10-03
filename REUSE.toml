@@ -9,8 +9,8 @@ SPDX-FileCopyrightText = "Anne Jan Brouwer"
 SPDX-License-Identifier = "MIT"
 
 # Badge.Team's badger and snake, cut out of konsool_mascots.svg from
-# https://github.com/badgeteam/website (the snake's hoverboard given back its left end)
-# by tools/sprites.py.
+# https://github.com/badgeteam/website by tools/sprites.py, the snake's hoverboard drawn
+# anew under it.
 [[annotations]]
 path = ["badger.webp", "snake.webp"]
 SPDX-FileCopyrightText = "Stichting Badge.Team"
