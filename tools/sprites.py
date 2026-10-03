@@ -6,7 +6,8 @@ Usage: tools/sprites.py path/to/konsool_mascots.svg
 
 The badger and the snake share one purple outline in the drawing, so each gets the part of
 it around its own fills. The badger's foot covers the left end of the snake's hoverboard;
-that end is drawn in here, rounded, in the board's pink with a purple rim.
+that end is drawn in here: square, like the tail of a real hoverboard (the nose is the
+rounded end), in the board's pink with a purple rim.
 Needs inkscape, ImageMagick and Pillow.
 """
 import subprocess
@@ -53,12 +54,18 @@ def board_end(src, dst):
     for y in range(250, 305):              # a stray bit of the badger's outline
         for x in range(0, 40):
             px[x, y] = (0, 0, 0, 0)
+    # Clear what's left of the cut beyond the new tail, a line from (50, 205) to (80, 398).
+    for y in range(185, 445):
+        edge = 50 + (80 - 50) * (min(max(y, 205), 398) - 205) / (398 - 205)
+        for x in range(0, int(edge)):
+            px[x, y] = (0, 0, 0, 0)
     pad = 30
     bez = lambda p0, p1, p2, p3, n=30: [tuple((1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t ** 2 * c + t ** 3 * e
                                               for a, b, c, e in zip(p0, p1, p2, p3)) for t in (i / n for i in range(n + 1))]
     o = lambda x, y: (x + pad, y)
-    pts = ([o(88, 203)] + bez(o(88, 203), o(40, 215), o(30, 255), o(40, 300))
-           + bez(o(40, 300), o(48, 345), o(80, 385), o(125, 408)) + [o(195, 432), o(230, 330), o(200, 215)])
+    pts = ([o(88, 203), o(64, 205)] + bez(o(64, 205), o(50, 206), o(50, 206), o(52, 220))
+           + [o(78, 384)] + bez(o(78, 384), o(80, 398), o(80, 398), o(95, 401))
+           + [o(125, 408), o(195, 432), o(230, 330), o(200, 215)])
     mask = Image.new('L', (s.width + pad, s.height), 0)
     ImageDraw.Draw(mask).polygon(pts, fill=255)
     out = Image.new('RGBA', mask.size, (0, 0, 0, 0))

@@ -139,14 +139,14 @@ function start() {
     if (!snaking) {
       word('BADGER', W / 2, H * 0.3, Math.min(W * 0.16, H * 0.16), COLOURS[beat % COLOURS.length], 1 + 0.25 * kick, 0);
     } else if (snake.complete && snake.naturalWidth) {
-      // The snake rides through from the right, nose first, hovering; then turns and comes
-      // back the other way, a bit higher up.
+      // The snake rides through from the left, the board's rounded nose first, hovering; then
+      // turns and comes back the other way, a bit higher up.
       const pass = snakeTime / (SNAKE_BEATS * BEAT / 2);
       const back = pass >= 1;
       const u = pass % 1;
       const sh = Math.min(H * 0.45, W * 0.5);
       const sw = sh * snake.width / snake.height;
-      const across = W + sw * 0.6 - u * (W + sw * 1.2);
+      const across = -sw * 0.6 + u * (W + sw * 1.2);
       const x = back ? W - across : across;
       const y = H * (back ? 0.55 : 0.62) + Math.sin(snakeTime * 7) * sh * 0.04;
       ctx.save();
@@ -156,7 +156,7 @@ function start() {
       ctx.globalAlpha = 0.6;
       for (let i = 0; i < 6; i += 1) {
         ctx.fillStyle = COLOURS[i % COLOURS.length];
-        ctx.fillRect(sw * 0.3, sh * (0.1 + i * 0.06), W + sw, sh * 0.02);
+        ctx.fillRect(-sw * 0.3 - W - sw, sh * (0.1 + i * 0.06), W + sw, sh * 0.02);
       }
       ctx.globalAlpha = 1;
       ctx.rotate(Math.sin(snakeTime * 3.5) * 0.04);
