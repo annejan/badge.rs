@@ -1,0 +1,166 @@
+// badge.rs: badger badger badger ... a snake! With love to Weebl's badgers, made with
+// Badge.Team's own badger and snake (CC BY 4.0). No sound, no libraries, nothing inline.
+'use strict';
+
+const BEAT = 0.5;                  // 120 BPM
+const BADGER_BEATS = 24;           // a badger pops up on each beat, then
+const SNAKE_BEATS = 8;             // the snake rides through
+const CYCLE = (BADGER_BEATS + SNAKE_BEATS) * BEAT;
+const MAX_BADGERS = 12;
+const COLOURS = ['#fdc549', '#e94076', '#009ecf', '#7ac29b', '#e7247f'];
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas = document.getElementById('stage');
+
+if (canvas && !reduceMotion) start();
+
+function start() {
+  const ctx = canvas.getContext('2d');
+  const badger = new Image();
+  badger.src = '/badger.webp';
+  const snake = new Image();
+  snake.src = '/snake.webp';
+  document.documentElement.classList.add('live');
+  canvas.addEventListener('click', () => { location.href = 'https://badge.team/'; });
+
+  let W = 0, H = 0, dpr = 1;
+  function layout() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = innerWidth;
+    H = innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+  }
+  layout();
+  addEventListener('resize', layout);
+
+  const confetti = Array.from({ length: 90 }, () => ({
+    x: Math.random(), y: Math.random(), r: Math.random() * Math.PI * 2,
+    v: 0.04 + Math.random() * 0.08, spin: (Math.random() - 0.5) * 4,
+    size: 4 + Math.random() * 6, colour: COLOURS[Math.floor(Math.random() * COLOURS.length)],
+    shape: Math.floor(Math.random() * 3),
+  }));
+
+  // Where badger k stands: rows from the front, the back rows smaller and higher up.
+  function spot(k, size) {
+    const cols = Math.max(3, Math.min(6, Math.floor(W / (size * 0.85))));
+    const row = Math.floor(k / cols);
+    const col = k % cols;
+    const inRow = Math.min(cols, MAX_BADGERS - row * cols);
+    const tall = H > W;                                  // phones: more rows, stacked higher
+    const scale = 1 - row * (tall ? 0.12 : 0.25);
+    const gap = W / (inRow + 0.4);
+    const x = gap * (col + 0.7) + (row % 2 ? gap * 0.25 : 0);
+    const ground = H * 0.92 - row * size * (tall ? 0.8 : 0.5);
+    return { x, ground, scale, row };
+  }
+
+  const ease = (a, b, t) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+  const back = (u) => 1 + 2.7 * (u - 1) ** 3 + 1.7 * (u - 1) ** 2;   // ease out, with overshoot
+
+  function drawBadger(k, beat, phase, size, sink) {
+    const { x, ground, scale } = spot(k, size);
+    const age = beat - k + phase;                       // beats since this one popped up
+    if (age < 0) return;
+    const pop = back(Math.min(1, age / 0.5));
+    const squat = Math.exp(-8 * phase);
+    const h = size * scale;
+    const w = h * badger.width / badger.height;
+    const tilt = ((beat + k) % 2 ? 1 : -1) * 0.07 * (1 - squat * 0.5);
+    ctx.save();
+    ctx.translate(x, ground + h * (1 - pop) + sink * (H - ground + h));   // duck, right off the screen
+    ctx.rotate(tilt);
+    ctx.scale(1 + 0.06 * squat, 1 - 0.09 * squat);
+    ctx.drawImage(badger, -w / 2, -h, w, h);
+    ctx.restore();
+  }
+
+  function word(text, x, y, size, colour, punch, shake) {
+    ctx.save();
+    ctx.translate(x + (Math.random() - 0.5) * shake, y + (Math.random() - 0.5) * shake);
+    ctx.scale(punch, punch);
+    ctx.font = `900 ${size}px Impact, 'Arial Black', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = size * 0.14;
+    ctx.strokeStyle = '#662483';
+    ctx.strokeText(text, 0, 0);
+    ctx.fillStyle = colour;
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
+  const t0 = performance.now();
+  let last = t0;
+  function frame() {
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    const t = ((now - t0) / 1000) % CYCLE;
+    const beat = Math.floor(t / BEAT);
+    const phase = (t % BEAT) / BEAT;
+    const snakeTime = Math.max(0, t - BADGER_BEATS * BEAT);
+    const snaking = beat >= BADGER_BEATS;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#1b1532');
+    sky.addColorStop(1, snaking ? '#4a1d4f' : '#2f2160');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Confetti, falling a little faster on the beat (and a lot faster for the snake).
+    const kick = Math.exp(-6 * phase);
+    for (const c of confetti) {
+      c.y += c.v * dt * (1 + kick + (snaking ? 3 : 0));
+      c.r += c.spin * dt;
+      if (c.y > 1.05) { c.y = -0.05; c.x = Math.random(); }
+      ctx.save();
+      ctx.translate(c.x * W, c.y * H);
+      ctx.rotate(c.r);
+      ctx.fillStyle = c.colour;
+      if (c.shape === 0) ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+      else if (c.shape === 1) { ctx.beginPath(); ctx.arc(0, 0, c.size / 3, 0, Math.PI * 2); ctx.fill(); }
+      else { ctx.beginPath(); ctx.moveTo(0, -c.size / 2); ctx.lineTo(c.size / 2, c.size / 2); ctx.lineTo(-c.size / 2, c.size / 2); ctx.fill(); }
+      ctx.restore();
+    }
+
+    const size = Math.min(H * 0.34, W * 0.36);
+    if (badger.complete && badger.naturalWidth) {
+      const count = Math.min(MAX_BADGERS, beat + 1);
+      const sink = snaking ? ease(0, 2 * BEAT, snakeTime) ** 2 : 0;
+      const order = Array.from({ length: count }, (_, k) => k).sort((a, b) => spot(b, size).row - spot(a, size).row);
+      for (const k of order) drawBadger(k, Math.min(beat, BADGER_BEATS), snaking ? 0 : phase, size, sink);
+    }
+
+    if (!snaking) {
+      word('BADGER', W / 2, H * 0.3, Math.min(W * 0.16, H * 0.16), COLOURS[beat % COLOURS.length], 1 + 0.25 * kick, 0);
+    } else if (snake.complete && snake.naturalWidth) {
+      // The snake rides through from the right, nose first, hovering.
+      const u = snakeTime / (SNAKE_BEATS * BEAT);
+      const sh = Math.min(H * 0.45, W * 0.5);
+      const sw = sh * snake.width / snake.height;
+      const x = W + sw * 0.6 - u * (W + sw * 1.2);
+      const y = H * 0.62 + Math.sin(snakeTime * 7) * sh * 0.04;
+      ctx.save();
+      // Speed lines behind the board.
+      for (let i = 0; i < 6; i += 1) {
+        ctx.fillStyle = COLOURS[i % COLOURS.length];
+        ctx.globalAlpha = 0.6;
+        const ly = y + sh * (0.1 + i * 0.06);
+        ctx.fillRect(x + sw * 0.3, ly, W, sh * 0.02);
+      }
+      ctx.globalAlpha = 1;
+      ctx.translate(x, y);
+      ctx.rotate(Math.sin(snakeTime * 3.5) * 0.04);
+      ctx.drawImage(snake, -sw / 2, -sh / 2, sw, sh);
+      ctx.restore();
+      const text = beat < BADGER_BEATS + 4 ? 'SNAKE!' : "IT'S A SNAKE!";
+      word(text, W / 2, H * 0.3, Math.min(W * 0.13, H * 0.15), '#e94076', 1 + 0.15 * kick, Math.min(W, H) * 0.02);
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}

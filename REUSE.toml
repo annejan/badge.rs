@@ -1,0 +1,17 @@
+version = 1
+SPDX-PackageName = "badge.rs"
+SPDX-PackageDownloadLocation = "https://github.com/annejan/badge.rs"
+
+# The page, its style and script, the server config and the sprite tool.
+[[annotations]]
+path = ["index.html", "badge.css", "badge.js", ".htaccess", "tools/**", "README.md", "REUSE.toml", ".gitignore"]
+SPDX-FileCopyrightText = "Anne Jan Brouwer"
+SPDX-License-Identifier = "MIT"
+
+# Badge.Team's badger and snake, cut out of konsool_mascots.svg from
+# https://github.com/badgeteam/website (the snake's hoverboard given back its left end)
+# by tools/sprites.py.
+[[annotations]]
+path = ["badger.webp", "snake.webp"]
+SPDX-FileCopyrightText = "Stichting Badge.Team"
+SPDX-License-Identifier = "CC-BY-4.0"
