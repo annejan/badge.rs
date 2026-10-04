@@ -10,7 +10,7 @@ const SNAKE_BEATS = 16;            // the snake rides through, and back again
 const CYCLE = (BADGER_BEATS + SNAKE_BEATS) * BEAT;
 const MAX_BADGERS = 12;
 const COLOURS = ['#fdc549', '#e94076', '#009ecf', '#7ac29b', '#e7247f'];
-const MUSHROOM_BEATS = [12, 16];   // after the twelfth badger: mushroom, mushroom!
+const MUSHROOM_BEATS = [12, 16];   // after the twelfth badger: mushroom (12), mushroom (14)!
 
 // A fly agaric, 16 x 16 pixels: k outline, R red, r shade, W white spots, c stem, s its shadow.
 const MUSHROOM = [
@@ -243,13 +243,18 @@ function start() {
 
     const mushrooming = beat >= MUSHROOM_BEATS[0] && beat < MUSHROOM_BEATS[1];
     if (mushrooming) {
-      // A fly agaric pops up between the badgers, bouncing on the beat.
-      const m = Math.min(H * 0.26, W * 0.3);
-      const up = back(Math.min(1, (t - MUSHROOM_BEATS[0] * BEAT) / 0.4));
+      // Mushroom, mushroom! Two fly agarics pop up between the badgers, two beats apart,
+      // bouncing on the beat.
+      const m = Math.min(H * 0.26, W * 0.26);
       const bounce = Math.exp(-8 * phase) * m * 0.08;
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(mushroom, W / 2 - m / 2, H * 0.62 - m * up + bounce, m, m);
+      [W * 0.36, W * 0.64].forEach((x, i) => {
+        const since = t - (MUSHROOM_BEATS[0] + 2 * i) * BEAT;
+        if (since < 0) return;
+        const up = back(Math.min(1, since / 0.4));
+        ctx.drawImage(mushroom, x - m / 2, H * 0.62 - m * up + bounce, m, m);
+      });
       ctx.restore();
       word('MUSHROOM!', W / 2, H * 0.3, Math.min(W * 0.12, H * 0.14), COLOURS[beat % COLOURS.length], 1 + 0.25 * kick, 0);
     } else if (!snaking) {
