@@ -58,6 +58,28 @@ function start() {
   const mushroom = mushroomSprite();
   document.documentElement.classList.add('live');
 
+  // Pause and play, for everything that moves (WCAG 2.2.2); P does the same. Paused, the
+  // clock stands still, so everything picks up where it was.
+  let pausedAt = null, pausedFor = 0;
+  const clock = () => (pausedAt ?? performance.now()) - pausedFor;
+  const pauseButton = document.getElementById('pause');
+  function setPaused(on) {
+    if (on === (pausedAt !== null)) return;
+    if (on) pausedAt = performance.now();
+    else {
+      pausedFor += performance.now() - pausedAt;
+      pausedAt = null;
+      requestAnimationFrame(frame);
+    }
+    pauseButton.setAttribute('aria-pressed', String(on));
+    pauseButton.textContent = on ? 'Play' : 'Pause';
+  }
+  pauseButton.hidden = false;
+  pauseButton.addEventListener('click', () => setPaused(pausedAt === null));
+  addEventListener('keydown', (event) => {
+    if ((event.key === 'p' || event.key === 'P') && !event.target.closest?.('button')) setPaused(pausedAt === null);
+  });
+
   // Each badger's box on screen this frame, front ones last; and what's been done to them
   // this round: hops, and whether it fell over.
   let boxes = [];
@@ -78,7 +100,7 @@ function start() {
     }
     const p = poked.get(k) || { hops: 0, at: -10 };
     p.hops += 1;
-    p.at = performance.now() / 1000;
+    p.at = clock() / 1000;
     poked.set(k, p);
   });
 
@@ -88,7 +110,7 @@ function start() {
   addEventListener('keydown', (event) => {
     if (event.key.length !== 1) return;
     typed = (typed + event.key.toLowerCase()).slice(-7);
-    if (typed === 'konsool') flyby = performance.now() / 1000;
+    if (typed === 'konsool') flyby = clock() / 1000;
   });
 
   let W = 0, H = 0, dpr = 1;
@@ -136,7 +158,7 @@ function start() {
     const w = h * badger.width / badger.height;
     const tilt = ((beat + k) % 2 ? 1 : -1) * 0.07 * (1 - squat * 0.5);
     const p = poked.get(k);
-    const since = p ? performance.now() / 1000 - p.at : 10;
+    const since = p ? clock() / 1000 - p.at : 10;
     const fallen = p && p.hops >= 5;
     const hop = !fallen && since < 0.45 ? Math.sin(Math.PI * since / 0.45) * h * 0.3 : 0;
     const fall = fallen ? -1.45 * Math.min(1, since / 0.5) : 0;   // over on its back, slowly
@@ -169,10 +191,11 @@ function start() {
     ctx.restore();
   }
 
-  const t0 = performance.now();
+  const t0 = clock();
   let last = t0;
   function frame() {
-    const now = performance.now();
+    if (pausedAt !== null) return;
+    const now = clock();
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const t = ((now - t0) / 1000) % CYCLE;
