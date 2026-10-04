@@ -1,5 +1,7 @@
-// badge.rs: badger badger badger ... a snake! With love to Weebl's badgers, made with
-// Badge.Team's own badger and snake (CC BY 4.0). No sound, no libraries, nothing inline.
+// badge.rs: badger badger badger ... mushroom! ... a snake! With love to Weebl's badgers,
+// made with Badge.Team's own badger, snake and Konsool (CC BY 4.0) and a fly agaric drawn
+// here. Click a badger and it hops (five times and it falls over); click anywhere else to go
+// to badge.team; type "konsool" and one flies by. No sound, no libraries, nothing inline.
 'use strict';
 
 const BEAT = 0.5;                  // 120 BPM
@@ -8,6 +10,37 @@ const SNAKE_BEATS = 16;            // the snake rides through, and back again
 const CYCLE = (BADGER_BEATS + SNAKE_BEATS) * BEAT;
 const MAX_BADGERS = 12;
 const COLOURS = ['#fdc549', '#e94076', '#009ecf', '#7ac29b', '#e7247f'];
+const MUSHROOM_BEATS = [12, 16];   // after the twelfth badger: mushroom, mushroom!
+
+// A fly agaric, 16 x 16 pixels: k outline, R red, r shade, W white spots, c stem, s its shadow.
+const MUSHROOM = [
+  '.....kkkkkk.....',
+  '...kkRRRRRRkk...',
+  '..kRRWWRRRRRRk..',
+  '.kRRWWWRRRWWRRk.',
+  '.kRRRWRRRRWWRRk.',
+  'kRRRRRRRWRRRRRRk',
+  'kRWWRRRRRRRWWRRk',
+  'kRWWRRRRRRRWWRrk',
+  'krRRRRWWRRRRRrrk',
+  '.krrrrrrrrrrrrk.',
+  '..kkkkcccckkkk..',
+  '.....kccssk.....',
+  '.....kccssk.....',
+  '....kcccccsk....',
+  '....kcccccsk....',
+  '.....kkkkkk.....',
+];
+const PIXEL = { k: '#3b1f2b', R: '#e5332a', r: '#a8201a', W: '#ffffff', c: '#f3e9d2', s: '#d8c9a8' };
+function mushroomSprite() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const g = c.getContext('2d');
+  MUSHROOM.forEach((row, y) => [...row].forEach((p, x) => {
+    if (PIXEL[p]) { g.fillStyle = PIXEL[p]; g.fillRect(x, y, 1, 1); }
+  }));
+  return c;
+}
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canvas = document.getElementById('stage');
@@ -20,8 +53,43 @@ function start() {
   badger.src = '/badger.webp';
   const snake = new Image();
   snake.src = '/snake.webp';
+  const konsool = new Image();
+  konsool.src = '/konsool.webp';
+  const mushroom = mushroomSprite();
   document.documentElement.classList.add('live');
-  canvas.addEventListener('click', () => { location.href = 'https://badge.team/'; });
+
+  // Each badger's box on screen this frame, front ones last; and what's been done to them
+  // this round: hops, and whether it fell over.
+  let boxes = [];
+  let poked = new Map();
+  let round = -1;
+  const hit = (event) => {
+    for (let i = boxes.length - 1; i >= 0; i -= 1) {
+      const b = boxes[i];
+      if (event.clientX > b.x && event.clientX < b.x + b.w && event.clientY > b.y && event.clientY < b.y + b.h) return b.k;
+    }
+    return -1;
+  };
+  canvas.addEventListener('click', (event) => {
+    const k = hit(event);
+    if (k < 0) {
+      location.href = 'https://badge.team/';
+      return;
+    }
+    const p = poked.get(k) || { hops: 0, at: -10 };
+    p.hops += 1;
+    p.at = performance.now() / 1000;
+    poked.set(k, p);
+  });
+
+  // Type konsool and one flies by.
+  let typed = '';
+  let flyby = -10;
+  addEventListener('keydown', (event) => {
+    if (event.key.length !== 1) return;
+    typed = (typed + event.key.toLowerCase()).slice(-7);
+    if (typed === 'konsool') flyby = performance.now() / 1000;
+  });
 
   let W = 0, H = 0, dpr = 1;
   function layout() {
@@ -67,12 +135,20 @@ function start() {
     const h = size * scale;
     const w = h * badger.width / badger.height;
     const tilt = ((beat + k) % 2 ? 1 : -1) * 0.07 * (1 - squat * 0.5);
+    const p = poked.get(k);
+    const since = p ? performance.now() / 1000 - p.at : 10;
+    const fallen = p && p.hops >= 5;
+    const hop = !fallen && since < 0.45 ? Math.sin(Math.PI * since / 0.45) * h * 0.3 : 0;
+    const fall = fallen ? -1.45 * Math.min(1, since / 0.5) : 0;   // over on its back, slowly
+    const y = ground + h * (1 - pop) + sink * (H - ground + h) - hop;   // duck, right off the screen
     ctx.save();
-    ctx.translate(x, ground + h * (1 - pop) + sink * (H - ground + h));   // duck, right off the screen
-    ctx.rotate(tilt);
-    ctx.scale(1 + 0.06 * squat, 1 - 0.09 * squat);
+    ctx.translate(x, y);
+    ctx.rotate(fallen ? fall : tilt);
+    if (!fallen) ctx.scale(1 + 0.06 * squat, 1 - 0.09 * squat);
     ctx.drawImage(badger, -w / 2, -h, w, h);
     ctx.restore();
+    boxes.push({ k, x: x - w / 2, y: y - h, w, h });
+    if (since < 0.6 && !fallen) word('!', x + w * 0.3, y - h * 1.05, h * 0.25, COLOURS[p.hops % COLOURS.length], 1, 0);
   }
 
   function word(text, x, y, size, colour, punch, shake) {
@@ -100,6 +176,12 @@ function start() {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const t = ((now - t0) / 1000) % CYCLE;
+    const r = Math.floor((now - t0) / 1000 / CYCLE);
+    if (r !== round) {                                    // a new round: all badgers back up
+      round = r;
+      poked = new Map();
+    }
+    boxes = [];
     const beat = Math.floor(t / BEAT);
     const phase = (t % BEAT) / BEAT;
     const snakeTime = Math.max(0, t - BADGER_BEATS * BEAT);
@@ -136,7 +218,18 @@ function start() {
       for (const k of order) drawBadger(k, Math.min(beat, BADGER_BEATS), snaking ? 0 : phase, size, sink);
     }
 
-    if (!snaking) {
+    const mushrooming = beat >= MUSHROOM_BEATS[0] && beat < MUSHROOM_BEATS[1];
+    if (mushrooming) {
+      // A fly agaric pops up between the badgers, bouncing on the beat.
+      const m = Math.min(H * 0.26, W * 0.3);
+      const up = back(Math.min(1, (t - MUSHROOM_BEATS[0] * BEAT) / 0.4));
+      const bounce = Math.exp(-8 * phase) * m * 0.08;
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(mushroom, W / 2 - m / 2, H * 0.62 - m * up + bounce, m, m);
+      ctx.restore();
+      word('MUSHROOM!', W / 2, H * 0.3, Math.min(W * 0.12, H * 0.14), COLOURS[beat % COLOURS.length], 1 + 0.25 * kick, 0);
+    } else if (!snaking) {
       word('BADGER', W / 2, H * 0.3, Math.min(W * 0.16, H * 0.16), COLOURS[beat % COLOURS.length], 1 + 0.25 * kick, 0);
     } else if (snake.complete && snake.naturalWidth) {
       // The snake rides through from the left, the board's rounded nose first, hovering; then
@@ -164,6 +257,21 @@ function start() {
       ctx.restore();
       const text = ['SNAKE!', 'A SNAKE!', 'SNAAAKE!', "OH, IT'S A SNAKE!"][Math.floor((beat - BADGER_BEATS) / 4)];
       word(text, W / 2, H * 0.3, Math.min(W * 0.13, H * 0.15), '#e94076', 1 + 0.15 * kick, Math.min(W, H) * 0.02);
+    }
+
+    // The Konsool flying by, when called for.
+    const fly = now / 1000 - flyby;
+    if (fly < 4 && konsool.complete && konsool.naturalWidth) {
+      const kh = Math.min(H * 0.4, W * 0.45);
+      const kw = kh * konsool.width / konsool.height;
+      const x = W + kw - fly / 4 * (W + kw * 2);
+      const y = H * 0.35 + Math.sin(fly * 4) * kh * 0.08;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.sin(fly * 3) * 0.12);
+      ctx.drawImage(konsool, -kw / 2, -kh / 2, kw, kh);
+      ctx.restore();
+      word('KONSOOL!', W / 2, H * 0.62 - kh * 0.1, Math.min(W * 0.1, H * 0.11), '#7ac29b', 1, 0);
     }
 
     requestAnimationFrame(frame);

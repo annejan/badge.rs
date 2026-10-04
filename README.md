@@ -1,8 +1,10 @@
 # badge.rs
 
-Badger, badger, badger ... a snake! The front page of [badge.rs](https://badge.rs/): a row
-of dancing badgers and a snake on a hoverboard, all of them Badge.Team's own mascots.
-Clicking anywhere goes to [badge.team](https://badge.team/). With love to Weebl's badgers.
+Badger, badger, badger ... mushroom! ... a snake! The front page of
+[badge.rs](https://badge.rs/): a row of dancing badgers, a fly agaric and a snake on a
+hoverboard, the animals Badge.Team's own mascots. Click a badger and it hops (five times
+and it falls over); click anywhere else to go to [badge.team](https://badge.team/); type
+`konsool` and one flies by. With love to Weebl's badgers.
 
 Plain HTML, CSS and a canvas script, no libraries, nothing inline (the server's CSP is
 `default-src 'self'`). Without script, or with reduced motion, the two of them stand still.
