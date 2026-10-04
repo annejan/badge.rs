@@ -10,8 +10,9 @@ SPDX-License-Identifier = "MIT"
 
 # Badge.Team's badger and snake, cut out of konsool_mascots.svg from
 # https://github.com/badgeteam/website by tools/sprites.py, the snake's hoverboard drawn
-# anew under it; and the Konsool, a cropped render of its konsool.svg.
+# anew under it; the Konsool, a cropped render of its konsool.svg; and the badger's head as
+# the favicon.
 [[annotations]]
-path = ["badger.webp", "snake.webp", "konsool.webp"]
+path = ["badger.webp", "snake.webp", "konsool.webp", "favicon.ico", "apple-touch-icon.png"]
 SPDX-FileCopyrightText = "Stichting Badge.Team"
 SPDX-License-Identifier = "CC-BY-4.0"
